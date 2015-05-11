@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+
+cat << EOF > /usr/local/etc/haproxy/haproxy.cfg
+#---------------------------------------------------------------------
+# Global settings
+#---------------------------------------------------------------------
+global
+    log         127.0.0.1 local2 debug
+
+    #chroot      /var/lib/haproxy
+    pidfile     /var/run/haproxy.pid
+    maxconn     4000
+    #user        haproxy
+    #group       haproxy
+    #daemon
+
+    # turn on stats unix socket
+    #stats socket /var/lib/haproxy/stats
+EOF
+
+oIFS=$IFS
+IFS=$'\n'
+for LINE in $(env); do
+  IFS="="
+  arr=($LINE)
+  if [[ ${arr[0]} == FWD_* ]]; then
+    FWD_NAME=$(echo ${arr[0]} | sed 's/FWD_//g')
+    FWD_DNS=$(echo ${arr[1]} | awk -F':' '{print $1}')
+    FWD_PORT=$(echo ${arr[1]} | awk -F':' '{print $2}')
+cat << EOF >> /usr/local/etc/haproxy/haproxy.cfg
+listen $FWD_NAME 0.0.0.0:$FWD_PORT
+   log global
+   option dontlognull
+   mode tcp
+   timeout connect 30000ms
+   timeout client  30000ms
+   timeout server  30000ms
+   server master $FWD_DNS:$FWD_PORT
+EOF
+  fi
+done
+
+IFS=$oIFS
+
+cat /usr/local/etc/haproxy/haproxy.cfg
+
+exec haproxy -db -f /usr/local/etc/haproxy/haproxy.cfg
