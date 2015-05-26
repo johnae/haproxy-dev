@@ -31,10 +31,11 @@ cat << EOF >> /usr/local/etc/haproxy/haproxy.cfg
 listen $FWD_NAME 0.0.0.0:$FWD_PORT
    log global
    option dontlognull
+   option tcpka
    mode tcp
-   timeout connect 30000ms
-   timeout client  300000ms
-   timeout server  300000ms
+   timeout connect 4s
+   timeout client  16h
+   timeout server  16h
    server master $FWD_DNS:$FWD_PORT
 EOF
   fi
